@@ -130,6 +130,7 @@ function Layout() {
         <nav className="nav-menu">
           <NavLink to="/dashboard">Dashboard</NavLink>
           <NavLink to="/assignments">Assignments</NavLink>
+          {user.role !== 'student' && <NavLink to="/create-assignment">New Assignment</NavLink>}
           {user.role !== 'student' && <NavLink to="/submissions">Submissions</NavLink>}
           {user.role === 'admin' && <NavLink to="/register">Manage Users</NavLink>}
         </nav>
@@ -495,6 +496,148 @@ function AssignmentsPage() {
   );
 }
 
+function CreateAssignmentPage() {
+  const { token, user } = useAuth();
+  const navigate = useNavigate();
+  const [form, setForm] = useState({
+    title: '',
+    subject: 'Mathematics',
+    className: 'Grade 10A',
+    description: '',
+    dueDate: '',
+    instructions: ''
+  });
+  const [questions, setQuestions] = useState([{ id: `q-${Date.now()}`, prompt: '', expectedAnswer: '', points: 5 }]);
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (user?.role === 'student') {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
+
+  const updateQuestion = (index, field, value) => {
+    setQuestions((current) => current.map((question, questionIndex) => {
+      if (questionIndex !== index) return question;
+      return { ...question, [field]: field === 'points' ? Number(value) || 0 : value };
+    }));
+  };
+
+  const addQuestion = () => {
+    setQuestions((current) => [...current, { id: `q-${Date.now()}-${current.length + 1}`, prompt: '', expectedAnswer: '', points: 5 }]);
+  };
+
+  const removeQuestion = (index) => {
+    setQuestions((current) => current.filter((_, questionIndex) => questionIndex !== index));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setMessage('');
+    setLoading(true);
+
+    try {
+      const payload = {
+        ...form,
+        questions: questions.map((question) => ({
+          id: question.id,
+          prompt: question.prompt,
+          type: 'short-answer',
+          points: Number(question.points || 0),
+          expectedAnswer: question.expectedAnswer
+        }))
+      };
+
+      if (!payload.title || !payload.subject || !payload.className || payload.questions.length === 0 || payload.questions.some((q) => !q.prompt || !q.expectedAnswer)) {
+        throw new Error('Please complete the assignment title, class, subject, and every question before saving.');
+      }
+
+      await apiFetch('/api/assignments', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }, token);
+
+      navigate('/assignments');
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Panel title="Create assignment">
+      <form onSubmit={handleSubmit} className="assignment-form">
+        <div className="field-grid">
+          <div className="field-row">
+            <label>Assignment title</label>
+            <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
+          </div>
+          <div className="field-row">
+            <label>Subject</label>
+            <input value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} required />
+          </div>
+          <div className="field-row">
+            <label>Class</label>
+            <input value={form.className} onChange={(e) => setForm({ ...form, className: e.target.value })} required />
+          </div>
+          <div className="field-row">
+            <label>Due date</label>
+            <input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} />
+          </div>
+        </div>
+
+        <div className="field-row">
+          <label>Description</label>
+          <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Brief overview of the assignment" />
+        </div>
+
+        <div className="field-row">
+          <label>Instructions</label>
+          <textarea value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })} placeholder="Give learners clear instructions for the task" />
+        </div>
+
+        <div className="question-list">
+          {questions.map((question, index) => (
+            <div key={question.id} className="question-editor">
+              <div className="question-header">
+                <strong>Question {index + 1}</strong>
+                {questions.length > 1 && (
+                  <button type="button" className="mini-button danger" onClick={() => removeQuestion(index)}>Remove</button>
+                )}
+              </div>
+
+              <div className="field-row">
+                <label>Question prompt</label>
+                <textarea value={question.prompt} onChange={(e) => updateQuestion(index, 'prompt', e.target.value)} placeholder={"Example: Solve the equation: \\(3x + 5 = 20\\)"} required />
+              </div>
+
+              <div className="field-grid">
+                <div className="field-row">
+                  <label>Expected answer</label>
+                  <input value={question.expectedAnswer} onChange={(e) => updateQuestion(index, 'expectedAnswer', e.target.value)} required />
+                </div>
+                <div className="field-row">
+                  <label>Points</label>
+                  <input type="number" min="1" value={question.points} onChange={(e) => updateQuestion(index, 'points', e.target.value)} required />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="toolbar">
+          <button type="button" className="secondary-button" onClick={addQuestion}>Add question</button>
+          <button type="submit" className="primary-button" disabled={loading}>{loading ? 'Saving...' : 'Save assignment'}</button>
+        </div>
+
+        {message && <div className="alert error">{message}</div>}
+      </form>
+    </Panel>
+  );
+}
+
 function AssignmentPage() {
   const { id } = useParams();
   const { token, user } = useAuth();
@@ -690,6 +833,7 @@ function App() {
           <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/assignments" element={<AssignmentsPage />} />
+            <Route path="/create-assignment" element={<CreateAssignmentPage />} />
             <Route path="/assignment/:id" element={<AssignmentPage />} />
             <Route path="/submissions" element={<SubmissionsPage />} />
           </Route>
