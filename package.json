@@ -1,0 +1,42 @@
+{
+  "name": "practice",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server/index.js",
+  "scripts": {
+    "server": "nodemon server/index.js",
+    "client": "npm --prefix client run dev -- --host 0.0.0.0",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "build": "npm --prefix client run build",
+    "start": "NODE_ENV=production node server/index.js",
+    "seed": "node server/seed.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZayneOfficial/ecommerce-website-with-html.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ZayneOfficial/ecommerce-website-with-html/issues"
+  },
+  "homepage": "https://github.com/ZayneOfficial/ecommerce-website-with-html#readme",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "concurrently": "^10.0.6",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.7",
+    "express": "^5.3.0",
+    "express-validator": "^7.3.2",
+    "jsonwebtoken": "^9.0.3",
+    "katex": "^0.19.0",
+    "mongodb-memory-server": "^11.3.0",
+    "mongoose": "^9.11.1",
+    "react-katex": "^3.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
